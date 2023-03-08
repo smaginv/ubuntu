@@ -1,6 +1,6 @@
-# Ubuntu 22.04 LTS 
+## Ubuntu 22.04 LTS
 
-## configuration script for Java programming <br><br>
+### configuration script for Java programming <br><br>
 
 **1. Use wget to download the script**
 
@@ -15,12 +15,12 @@ chmod +x setup.sh
 
 **3. Run the script**
 ```bash
-./ setup.sh
+./setup.sh
 ```
 
 #
 
-## Features
+### **Features**
 
 **1. completely removed snap:**
 
