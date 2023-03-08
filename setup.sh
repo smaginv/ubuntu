@@ -4,6 +4,11 @@ home_directory="/home/$USER"
 tmp_directory="$home_directory/tmp"
 tmp_created=false
 
+setup_start_time=$(date +"%T")
+start_time_ms=$(date +%s);
+os=$(lsb_release -d | sed 's/Description:[[:space:]]*//g')
+initial_number_packages=$(dpkg --get-selections | wc --lines)
+
 packages_to_remove=(
     "snap"
     )
@@ -12,6 +17,10 @@ packages_to_install=(
     "gnome-tweaks" "gnome-shell-extension-manager" "synaptic"
     "curl" "Git" "Open JDK" "Maven" "Gradle" "JetBrains Toolbox" "VSCode" "Docker" "pgAdmin 4" "Postman" 
     "Google Chrome"
+    )
+
+docker_images=(
+    "postgres"
     )
 
 function show_warning_message {
@@ -44,7 +53,7 @@ function removing_package {
     read -p " would you like to remove $1? [y*/n] (enter = y*) " input
     if [[ "$input" == "y" || "$input" == "" ]]
     then
-        all_removed_packages+=("$1")
+        removed_packages+=("$1")
         case $1 in
             "snap" )
                 removing_snap
@@ -92,6 +101,7 @@ function installing_git {
     git config --global core.autocrlf input
     git config --global core.safecrlf warn
     git config --global core.quotepath off
+    installed_packages+=("$1")
 }
 
 function installing_openjdk {
@@ -158,6 +168,7 @@ function installing_openjdk {
         fi
     else
         show_warning_message "canceling installation $1"
+        skipped_packages+=("$1")
     fi
 }
 
@@ -199,8 +210,10 @@ function installing_maven {
         echo "export M2_HOME=/opt/maven
             export MAVEN_HOME=/opt/maven
             export PATH=\${M2_HOME}/bin:\${PATH}" | sed -e 's/^[[:space:]]*//' | sudo tee /etc/profile.d/maven.sh
+        installed_packages+=("$1")
     else
         show_warning_message "canceling installation $1"
+        skipped_packages+=("$1")
     fi
 }
 
@@ -219,8 +232,10 @@ function installing_gradle {
 
         echo "export GRADLE_HOME=/opt/gradle
             export PATH=\${GRADLE_HOME}/bin:\${PATH}" | sed -e 's/^[[:space:]]*//' | sudo tee /etc/profile.d/gradle.sh
+        installed_packages+=("$1")
     else
         show_warning_message "canceling installation $1"
+        skipped_packages+=("$1")
     fi
 }
 
@@ -230,6 +245,7 @@ function check_jdk {
         installing_"${1,,}" "$1"
     else
         show_warning_message "JDK is not installed, skipping $1 installation"
+        skipped_packages+=("$1")
     fi      
 }
 
@@ -244,6 +260,7 @@ function installing_toolbox {
     read -p $'\e[33m wait for JetBrains Toolbox to start and press ENTER to continue \e[39m'
     
     rm -r $tmp_directory/$toolbox
+    installed_packages+=("$1")
 }
 
 function installing_vscode {
@@ -257,6 +274,7 @@ function installing_vscode {
     
     sudo apt-get update
     sudo apt-get -y install code
+    installed_packages+=("$1")
 }
 
 function installing_docker {
@@ -279,6 +297,19 @@ function installing_docker {
     compose_version=$(curl --silent https://api.github.com/repos/docker/compose/releases/latest | grep "tag_name" | sed 's/[A-Za-z_:", ]//g')
     sudo wget -O "/usr/local/bin/docker-compose" "https://github.com/docker/compose/releases/download/v$compose_version/docker-compose-$(uname -s)-$(uname -m)"
     sudo chmod +x /usr/local/bin/docker-compose
+
+    for image in "${docker_images[@]}"
+    do
+        read -p " pulling a Docker image: $image? [y*/n] (enter = y*) " input
+        if [[ "$input" == "y" || "$input" == "" ]]
+        then
+            sudo docker pull "$image"
+            pulling_docker_images+=("$image")
+        else
+            show_warning_message "skip Docker image: $image"
+        fi
+    done
+    installed_packages+=("$1")
 }
 
 function installing_pgadmin {
@@ -286,6 +317,7 @@ function installing_pgadmin {
     sudo sh -c 'echo "deb [signed-by=/usr/share/keyrings/packages-pgadmin-org.gpg] https://ftp.postgresql.org/pub/pgadmin/pgadmin4/apt/$(lsb_release -cs) pgadmin4 main" > /etc/apt/sources.list.d/pgadmin4.list'
     sudo apt-get update
     sudo apt-get -y install pgadmin4
+    installed_packages+=("$1")
 }
 
 function installing_postman {
@@ -305,12 +337,14 @@ function installing_postman {
     Exec=\"/opt/postman/Postman\"
     Comment=Postman GUI
     Categories=Development;Code;" | sed -e 's/^[[:space:]]*//' | sudo tee /usr/share/applications/postman.desktop
+    installed_packages+=("$1")
 }
 
 function installing_chrome {
     wget -P "$tmp_directory" "https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb"
     sudo apt-get install $tmp_directory/google-chrome-stable_current_amd64.deb
     rm $tmp_directory/google-chrome-stable_current_amd64.deb
+    installed_packages+=("$1")
 }
 
 function installing_package {
@@ -354,6 +388,7 @@ function installing_package {
         esac
     else
         show_warning_message "skipping $1 installation"
+        skipped_packages+=("$1")
     fi
 }
 
@@ -361,3 +396,75 @@ for package in "${packages_to_install[@]}"
 do
     installing_package "$package"
 done
+
+if [[ $tmp_created == true && ! $(ls $tmp_directory) ]]
+then
+    rm -r $tmp_directory
+fi
+
+end_time_ms=$(date +%s)
+time_diff=$((end_time_ms - start_time_ms))
+minutes=$((time_diff / 60))
+seconds=$((time_diff % 60))
+setup_end_time=$(date +"%T")
+
+echo "$(
+    echo "-------------------------------------------------------"
+    echo
+    echo " $os setup started: $setup_start_time"
+    echo
+    echo " $os setup is complete: $setup_end_time"
+    echo
+    echo " total setup time: $minutes min. $seconds sec."
+    echo
+    echo " initial number of installed packages: $initial_number_packages"
+    echo
+    echo " number of packages after installation and configuration: $(dpkg --get-selections | wc --lines)"
+    echo
+    echo "-------------------------------------------------------"
+    echo
+)" | tee log
+
+function print_log_array {
+    local msg1="$1"
+    local msg2="$2"
+    shift 2
+    local array=("$@")
+    echo "$(
+        echo
+        echo " $msg1 ${#array[@]}"
+        echo
+        echo " $msg2 "
+        echo
+        for item in "${array[@]}"
+        do
+            printf " %s\n" "${item}"
+        done
+        echo
+        echo "-------------------------------------------------------"
+        echo
+    )" | tee -a log
+}
+
+if [[ ${#installed_packages[@]} != 0 ]]
+then
+    print_log_array "number of installed programs:" "list of installed programs:" "${installed_packages[@]}"
+fi
+
+if [[ ${#pulling_docker_images[@]} != 0 ]]
+then
+    print_log_array "number of Docker images installed:" "list of installed Docker images:" "${pulling_docker_images[@]}"
+fi
+
+if [[ ${#removed_packages[@]} != 0 ]]
+then
+    print_log_array "number of deleted programs:" "list of deleted programs:" "${removed_packages[@]}"
+fi
+
+if [[ ${#skipped_packages[@]} != 0 ]]
+then
+    print_log_array "number of missed programs:" "list of missed programs:" "${skipped_packages[@]}"
+fi
+
+echo
+show_info_message " please reboot your system "
