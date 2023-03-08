@@ -23,6 +23,19 @@ docker_images=(
     "postgres"
     )
 
+gnome_extensions=(
+    "docker@stickman_0x00.com"
+    "clipboard-indicator@tudmotu.com" 
+    "drive-menu@gnome-shell-extensions.gcampax.github.com" 
+    "notification-banner-reloaded@marcinjakubowski.github.com"
+    )
+
+favorite_apps=(
+    "org.gnome.Nautilus.desktop" "org.gnome.Terminal.desktop" "org.gnome.Calculator.desktop"
+    "org.gnome.gedit.desktop" "google-chrome.desktop" "code.desktop" "jetbrains-idea.desktop" 
+    "postman.desktop" "gnome-system-monitor.desktop" "gnome-control-center.desktop"
+    )
+
 function show_warning_message {
     echo -e "\e[31m $1 \e[39m"
 }
@@ -396,6 +409,67 @@ for package in "${packages_to_install[@]}"
 do
     installing_package "$package"
 done
+
+read -p " would you like to install Gnome shell extensions? [y*/n] (enter = y*) " input
+if [[ "$input" == "y" || "$input" == "" ]]
+then
+    gnome_version=$(gnome-shell --version | sed 's/[A-Za-z][[:space:]]*//g' | sed 's/\.[0-9]//g')
+    url="https://extensions.gnome.org/download-extension"
+
+    for extension in "${gnome_extensions[@]}"
+    do
+        extensions+=( "TRUE" "${extension%@*}" )
+    done
+
+    installable_extensions=$(zenity --list \
+                        --checklist \
+                        --separator='\n' \
+                        --title="select extensions" \
+                        --width=550 \
+                        --height=300 \
+                        --hide-header \
+                        --column="choice" \
+                        --column="title" \
+                        "${extensions[@]}"
+                    )
+
+    for uuid_extension in "${gnome_extensions[@]}"
+    do
+        for extension in ${installable_extensions[@]}
+        do
+            if [[ "${uuid_extension}" == "${extension}"* ]]
+            then
+                uuid="${uuid_extension}"
+                wget -O "$tmp_directory/$uuid.zip" "$url/$uuid.shell-extension.zip?shell_version=$gnome_version"
+                gnome-extensions install "$tmp_directory/$uuid.zip"
+                rm "$tmp_directory/$uuid.zip"
+                installed_gnome_extensions+=("$extension")
+            fi
+        done
+    done
+else
+    show_warning_message "skipping Gnome shell extensions installation"
+fi
+
+read -p " would you like to customize your favorite apps? [y*/n] (enter = y*) " input
+if [[ "$input" == "y" || "$input" == "" ]]
+then
+    dock=""
+    for app in "${favorite_apps[@]}"
+    do
+        if [[ $(ls /usr/share/applications | grep "$app") || $(ls $home_directory/.local/share/applications | grep "$app") ]]
+        then
+            if [[ $dock == "" ]]
+            then
+                dock="'$app'"
+            else
+                dock="$dock, '$app'"
+            fi
+        fi
+    done
+    gsettings set org.gnome.shell favorite-apps "[$dock]"
+    sleep 1
+fi
 
 if [[ $tmp_created == true && ! $(ls $tmp_directory) ]]
 then
