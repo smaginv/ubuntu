@@ -15,7 +15,7 @@ packages_to_remove=(
 
 packages_to_install=(
     "gnome-tweaks" "gnome-shell-extension-manager" "synaptic"
-    "curl" "Git" "Open JDK" "Maven" "Gradle" "JetBrains Toolbox" "VSCode" "Docker" "pgAdmin 4" "Postman" 
+    "curl" "Git" "OpenJDK" "Maven" "Gradle" "JetBrains Toolbox" "VSCode" "Docker" "pgAdmin 4" "Postman" 
     "Google Chrome"
     )
 
@@ -368,7 +368,7 @@ function installing_package {
             "Git" )
                 installing_git "$1"
                 ;;
-            "Open JDK" )
+            "OpenJDK" )
                 installing_openjdk "$1"
                 ;;
             "Maven" )
