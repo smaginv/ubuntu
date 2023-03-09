@@ -5,7 +5,7 @@ tmp_directory="$home_directory/tmp"
 tmp_created=false
 
 setup_start_time=$(date +"%T")
-start_time_ms=$(date +%s);
+start_time_ms=$(date +%s)
 os=$(lsb_release -d | sed 's/Description:[[:space:]]*//g')
 initial_number_packages=$(dpkg --get-selections | wc --lines)
 
@@ -15,12 +15,12 @@ packages_to_remove=(
 
 packages_to_install=(
     "gnome-tweaks" "gnome-shell-extension-manager" "synaptic"
-    "curl" "Git" "OpenJDK" "Maven" "Gradle" "JetBrains Toolbox" "VSCode" "Docker" "pgAdmin 4" "Postman" 
-    "Google Chrome" "zsh"
+    "curl" "Git" "OpenJDK" "Maven" "Gradle" "JetBrains Toolbox" "VSCode" "Docker" "pgAdmin 4" 
+    "MySQL APT Repository" "Postman" "Google Chrome" "zsh"
     )
 
 docker_images=(
-    "postgres"
+    "postgres" "mysql"
     )
 
 gnome_extensions=(
@@ -252,16 +252,6 @@ function installing_gradle {
     fi
 }
 
-function check_jdk {
-    if [[ $is_installed_jdk || $(dpkg -l | grep "jdk") || $(ls /usr/lib/jvm/) ]]
-    then
-        installing_"${1,,}" "$1"
-    else
-        show_warning_message "JDK is not installed, skipping $1 installation"
-        skipped_packages+=("$1")
-    fi      
-}
-
 function installing_toolbox {
     sudo apt-get -y install libfuse2
     wget -O "$tmp_directory/jetbrains-toolbox.tar.gz" "https://data.services.jetbrains.com/products/download?platform=linux&code=TBA"
@@ -331,6 +321,27 @@ function installing_pgadmin {
     sudo apt-get update
     sudo apt-get -y install pgadmin4
     installed_packages+=("$1")
+}
+
+function installing_mysql_repository {
+    grep_html=$(curl --silent https://dev.mysql.com/downloads/repo/apt/ | grep "mysql-apt-config_*")
+    version=${grep_html#*file=}
+    mysql_apt_config=${version%&*}
+    wget -P "$tmp_directory" "https://repo.mysql.com//$mysql_apt_config"
+    sudo apt-get install $tmp_directory/$mysql_apt_config
+    sudo apt-get update
+    rm $tmp_directory/$mysql_apt_config
+    installed_packages+=("$1")
+
+    read -p " would you like to install MySQL Workbench? [y*/n] (enter = y*) " input
+    if [[ "$input" == "y" || "$input" == "" ]]
+    then
+        sudo apt-get -y install mysql-workbench-community
+        installed_packages+=("MySQL Workbench")
+    else
+        skipped_packages+=("MySQL Workbench")
+        show_warning_message "skipping MySQL Workbench installation"
+    fi
 }
 
 function installing_postman {
@@ -411,10 +422,10 @@ function installing_package {
                 installing_openjdk "$1"
                 ;;
             "Maven" )
-                check_jdk "$1"
+                installing_maven "$1"
                 ;;
             "Gradle" )
-                check_jdk "$1"
+                installing_gradle "$1"
                 ;;
             "JetBrains Toolbox" )
                 installing_toolbox "$1"
@@ -427,6 +438,9 @@ function installing_package {
                 ;;
             "pgAdmin 4" )
                 installing_pgadmin "$1"
+                ;;
+            "MySQL APT Repository" )
+                installing_mysql_repository "$1"
                 ;;
             "Postman" )
                 installing_postman "$1"

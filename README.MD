@@ -44,6 +44,8 @@ chmod +x setup.sh
 - Docker
 - Docker Compose
 - pgAdmin 4
+- MySQL APT Repository
+- MySQL Workbench
 - Postman
 - Google Chrome
 - Zsh
@@ -52,6 +54,7 @@ chmod +x setup.sh
 **3. pulling Docker images:**
 
 - postgres
+- mysql
 
 **4. installed GNOME Shell Extensions:**
 
