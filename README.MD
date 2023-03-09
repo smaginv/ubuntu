@@ -46,12 +46,14 @@ chmod +x setup.sh
 - pgAdmin 4
 - Postman
 - Google Chrome
+- Zsh
+- Oh My Zsh (plugins: git, syntax highlighting, autosuggestions, sudo, history, extract)
 
-**3. Docker images:**
+**3. pulling Docker images:**
 
 - postgres
 
-**4. GNOME Shell Extensions:**
+**4. installed GNOME Shell Extensions:**
 
 - Docker
 - Clipboard-indicator

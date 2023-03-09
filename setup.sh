@@ -16,7 +16,7 @@ packages_to_remove=(
 packages_to_install=(
     "gnome-tweaks" "gnome-shell-extension-manager" "synaptic"
     "curl" "Git" "OpenJDK" "Maven" "Gradle" "JetBrains Toolbox" "VSCode" "Docker" "pgAdmin 4" "Postman" 
-    "Google Chrome"
+    "Google Chrome" "zsh"
     )
 
 docker_images=(
@@ -360,6 +360,45 @@ function installing_chrome {
     installed_packages+=("$1")
 }
 
+function installing_zsh {
+    sudo apt-get -y install zsh
+
+    read -p " would you like to install Oh My Zsh? [y*/n] (enter = y*) " input
+    if [[ "$input" == "y" || "$input" == "" ]]
+    then
+        gnome-terminal -- sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+        read -p $'\e[33m press ENTER to continue \e[39m'
+        git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
+        git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
+
+        search="plugins=.*"
+        replace="plugins=(git zsh-syntax-highlighting zsh-autosuggestions sudo history extract)"
+
+        sed -i "s/$search/$replace/" $home_directory/.zshrc
+
+        echo "
+        # Removing all duplicates in .zsh_history
+        # setopt HIST_IGNORE_ALL_DUPS
+
+        # Set Git language to English
+        #alias git='LANG=en_US git'
+        alias git='LANG=en_GB git'" | sed -e 's/^[[:space:]]*//' >> $home_directory/.zshrc
+
+        echo "
+            if [ -d /etc/profile.d ]; then
+                for i in /etc/profile.d/*.sh; do
+                    if [ -r \$i ]; then
+                        . \$i
+                    fi
+                done
+                unset i
+            fi" | sudo tee -a /etc/zsh/zprofile
+    else
+        show_warning_message "skipping Oh My Zsh installation"
+    fi
+    installed_packages+=("$1")
+}
+
 function installing_package {
     read -p " would you like to install $1? [y*/n] (enter = y*) " input
     if [[ "$input" == "y" || "$input" == "" ]]
@@ -394,6 +433,9 @@ function installing_package {
                 ;;
             "Google Chrome" )
                 installing_chrome "$1"
+                ;;
+            "zsh" )
+                installing_zsh "$1"
                 ;;
             * )
                 sudo apt-get -y install "${1,,}"
@@ -527,7 +569,7 @@ fi
 
 if [[ ${#pulling_docker_images[@]} != 0 ]]
 then
-    print_log_array "number of Docker images installed:" "list of installed Docker images:" "${pulling_docker_images[@]}"
+    print_log_array "number of pulling Docker images:" "list of pulling Docker images:" "${pulling_docker_images[@]}"
 fi
 
 if [[ ${#removed_packages[@]} != 0 ]]
@@ -537,7 +579,7 @@ fi
 
 if [[ ${#skipped_packages[@]} != 0 ]]
 then
-    print_log_array "number of missed programs:" "list of missed programs:" "${skipped_packages[@]}"
+    print_log_array "number of skipped programs:" "list of skipped programs:" "${skipped_packages[@]}"
 fi
 
 echo
