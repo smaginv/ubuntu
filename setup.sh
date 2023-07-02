@@ -15,7 +15,7 @@ packages_to_remove=(
 
 packages_to_install=(
     "gnome-tweaks" "gnome-shell-extension-manager" "synaptic"
-    "curl" "Git" "OpenJDK" "Maven" "Gradle" "JetBrains Toolbox" "VSCode" "Docker" "pgAdmin 4" 
+    "curl" "Git" "SDKMAN!" "OpenJDK" "Maven" "Gradle" "JetBrains Toolbox" "VSCode" "Docker" "pgAdmin 4" 
     "MySQL APT Repository" "Postman" "Google Chrome" "zsh"
     )
 
@@ -115,6 +115,12 @@ function installing_git {
     git config --global core.autocrlf input
     git config --global core.safecrlf warn
     git config --global core.quotepath off
+    installed_packages+=("$1")
+}
+
+function installing_sdkman {
+    curl -s "https://get.sdkman.io" | bash
+    sdkman_is_installed=true
     installed_packages+=("$1")
 }
 
@@ -408,6 +414,16 @@ function installing_zsh {
     installed_packages+=("$1")
 }
 
+function check_sdkman {
+    if [[ $sdkman_is_installed == true ]]
+    then
+        show_info_message "SDKMAN! installed, $1 skipped"
+        skipped_packages+=("$1")
+    else
+        installing_"${1,,}" "$1"
+    fi
+}
+
 function installing_package {
     read -p " would you like to install $1? [y*/n] (enter = y*) " input
     if [[ "$input" == "y" || "$input" == "" ]]
@@ -416,14 +432,17 @@ function installing_package {
             "Git" )
                 installing_git "$1"
                 ;;
+            "SDKMAN!" )
+                installing_sdkman "$1"
+                ;;
             "OpenJDK" )
-                installing_openjdk "$1"
+                check_sdkman "$1"
                 ;;
             "Maven" )
-                installing_maven "$1"
+                check_sdkman "$1"
                 ;;
             "Gradle" )
-                installing_gradle "$1"
+                check_sdkman "$1"
                 ;;
             "JetBrains Toolbox" )
                 installing_toolbox "$1"

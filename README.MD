@@ -36,6 +36,7 @@ chmod +x setup.sh
 - Synaptic
 - cURL
 - Git (configuring git user during installation)
+- SDKMAN!
 - OpenJDK (with a choice of versions)
 - Apache Maven (with a choice of version)
 - Gradle (with a choice of version)
