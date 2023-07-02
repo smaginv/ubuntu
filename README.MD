@@ -59,6 +59,7 @@ chmod +x setup.sh
 **4. installed GNOME Shell Extensions:**
 
 - Docker
+- OpenWeather
 - Clipboard-indicator
 - Removable Drive Menu
 - Notification Banner Reloaded
