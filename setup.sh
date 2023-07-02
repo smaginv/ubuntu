@@ -26,6 +26,7 @@ docker_images=(
 gnome_extensions=(
     "docker@stickman_0x00.com"
     "clipboard-indicator@tudmotu.com" 
+    "openweather-extension@jenslody.de"
     "drive-menu@gnome-shell-extensions.gcampax.github.com" 
     "notification-banner-reloaded@marcinjakubowski.github.com"
     )
@@ -292,14 +293,11 @@ function installing_docker {
     fi
 
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    sudo chmod a+r /etc/apt/keyrings/docker.gpg
+    echo "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
     sudo apt-get update
-    sudo apt-get install docker-ce docker-ce-cli containerd.io docker-compose-plugin
+    sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
     sudo usermod -aG docker $USER
-
-    compose_version=$(curl --silent https://api.github.com/repos/docker/compose/releases/latest | grep "tag_name" | sed 's/[A-Za-z_:", ]//g')
-    sudo wget -O "/usr/local/bin/docker-compose" "https://github.com/docker/compose/releases/download/v$compose_version/docker-compose-$(uname -s)-$(uname -m)"
-    sudo chmod +x /usr/local/bin/docker-compose
 
     for image in "${docker_images[@]}"
     do
@@ -584,6 +582,11 @@ fi
 if [[ ${#pulling_docker_images[@]} != 0 ]]
 then
     print_log_array "number of pulling Docker images:" "list of pulling Docker images:" "${pulling_docker_images[@]}"
+fi
+
+if [[ ${#installed_gnome_extensions[@]} != 0 ]]
+then
+    print_log_array "number of installed Gnome shell extensions:" "list of installed Gnome shell extensions:" "${installed_gnome_extensions[@]}"
 fi
 
 if [[ ${#removed_packages[@]} != 0 ]]
